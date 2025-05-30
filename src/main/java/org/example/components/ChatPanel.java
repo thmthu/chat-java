@@ -2,7 +2,8 @@ package org.example.components;
 
 import org.example.data.GlobalData;
 import org.example.DTO.ChatMessage;
-
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -56,6 +57,10 @@ public class ChatPanel extends JPanel {
         messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
         messagesPanel.setBackground(Color.WHITE);
         messagesPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        // THÊM DÒNG NÀY: Đảm bảo messagesPanel sử dụng đủ không gian ngang
+        messagesPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        messagesPanel.setAlignmentY(Component.TOP_ALIGNMENT);
         
         // Add some spacing at the bottom to ensure messages don't get hidden behind input panel
         messagesPanel.add(Box.createVerticalStrut(20));
@@ -84,8 +89,17 @@ public class ChatPanel extends JPanel {
         inputPanel.add(sendButton, BorderLayout.EAST);
         
         add(inputPanel, BorderLayout.SOUTH);
+        addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    refreshLayout();
+                }
+            });
+        }
+    private void refreshLayout() {
+        messagesPanel.revalidate();
+        messagesPanel.repaint();
     }
-    
     // Set chat room ID and load messages
     public void setChatRoomId(String chatRoomId) {
         System.out.println("Setting chat room ID: " + chatRoomId);
@@ -151,7 +165,7 @@ public class ChatPanel extends JPanel {
         });
     }
     
-    // Add a single message bubble to the chat
+        // Add a single message bubble to the chat
     public void addMessageBubble(ChatMessage message) {
         boolean isSelf = message.getSenderId().equals(GlobalData.userId);
         
@@ -161,39 +175,63 @@ public class ChatPanel extends JPanel {
         messagePanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         
         // Message bubble
-        JPanel bubble = new JPanel(new BorderLayout(5, 5));
+        JPanel bubble = new JPanel();
+        bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
         bubble.setBorder(new EmptyBorder(8, 12, 8, 12));
         
         // Set alignment and style based on sender
         if (isSelf) {
             bubble.setBackground(new Color(0, 132, 255));
             messagePanel.add(bubble, BorderLayout.EAST);
-            bubble.setMaximumSize(new Dimension(300, 1000));
-            bubble.setPreferredSize(new Dimension(Math.min(300, message.getContent().length() * 8), 
-                                               Math.max(30, (message.getContent().length() / 40) * 20 + 20)));
         } else {
             bubble.setBackground(new Color(240, 240, 240));
             messagePanel.add(bubble, BorderLayout.WEST);
-            bubble.setMaximumSize(new Dimension(300, 1000));
-            bubble.setPreferredSize(new Dimension(Math.min(300, message.getContent().length() * 8),
-                                               Math.max(30, (message.getContent().length() / 40) * 20 + 20)));
         }
         
-        // Message text
-        JLabel contentLabel = new JLabel("<html><p style='width: 280px;'>" + message.getContent() + "</p></html>");
+        // Message text - sử dụng JTextArea thay vì JLabel
+        JTextArea contentLabel = new JTextArea(message.getContent());
+        System.out.println("Adding message: " + message.getContent());
+        contentLabel.setEditable(false);
+        contentLabel.setLineWrap(true);
+        contentLabel.setWrapStyleWord(true);
+        contentLabel.setBackground(bubble.getBackground());
         contentLabel.setForeground(isSelf ? Color.WHITE : Color.BLACK);
-        bubble.add(contentLabel, BorderLayout.CENTER);
+        contentLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        contentLabel.setBorder(null);
         
+        // Thiết lập kích thước cố định cho vùng chứa tin nhắn
+        int contentLength = message.getContent().length();
+        int preferredWidth;
+
+        if (contentLength <= 5) {
+            // Tin nhắn rất ngắn (như "mi", "ok", "hello")
+            preferredWidth = contentLength * 5 + 5; // Thêm padding
+        } else if (contentLength <= 20) {
+            // Tin nhắn độ dài trung bình
+            preferredWidth = contentLength * 5 + 5;
+        } else {
+            // Tin nhắn dài
+            preferredWidth = Math.min(300, contentLength * 5 + 5);
+        }
+                contentLabel.setPreferredSize(new Dimension(preferredWidth, contentLabel.getPreferredSize().height));        
         // Time label
         JLabel timeLabel = new JLabel(message.getSentAt().format(TIME_FORMATTER));
         timeLabel.setFont(new Font("Arial", Font.PLAIN, 10));
         timeLabel.setForeground(isSelf ? new Color(220, 220, 220) : Color.GRAY);
-        bubble.add(timeLabel, BorderLayout.SOUTH);
+        timeLabel.setAlignmentX(isSelf ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
+        
+        bubble.add(contentLabel);
+        bubble.add(Box.createVerticalStrut(3)); // Spacing
+        bubble.add(timeLabel);
+        
+        
+        // Đảm bảo messagePanel có chiều rộng đầy đủ
+        //messagePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, messagePanel.getPreferredSize().height));
         
         messagesPanel.add(messagePanel);
         messagesPanel.add(Box.createVerticalStrut(5));
     }
-    
+     
     // Add a message programmatically (for new messages)
     public void addMessage(String senderId, String content) {
         ChatMessage message = new ChatMessage();

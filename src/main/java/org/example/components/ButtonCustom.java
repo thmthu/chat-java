@@ -8,11 +8,11 @@ public class ButtonCustom extends JButton {
 
     public ButtonCustom(String text) {
         super(text);
-        setFont(new Font("Arial", Font.BOLD, 16));
+        setFont(new Font("Arial", Font.BOLD, 14));
         setFocusPainted(false);
         setBackground(Color.decode("#99CCFF"));
         setForeground(Color.WHITE);
-        setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         setContentAreaFilled(true);
         setOpaque(true);
 

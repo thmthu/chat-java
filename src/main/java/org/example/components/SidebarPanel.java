@@ -60,13 +60,23 @@ public class SidebarPanel extends JPanel {
         // Create new chat button
         JButton newChatButton = new ButtonCustom("+ New Chat");
         newChatButton.addActionListener(onNewChatClicked);
+
+        JButton newChatGroup = new ButtonCustom("+ New Group");
+        newChatGroup.addActionListener(e -> showNewGroupDialog());
+
+         JButton onlineList = new ButtonCustom("Online");
+        newChatButton.addActionListener(onNewChatClicked);
         
         // Add the button to a panel at the top
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+       // Sử dụng FlowLayout với khoảng cách 15 pixels giữa các components
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2)); // hgap=15, vgap=5
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
         topPanel.setBackground(Color.WHITE);
-        topPanel.add(newChatButton, BorderLayout.WEST);
-        
+
+        // Thêm các nút vào panel
+        topPanel.add(newChatButton);
+        topPanel.add(newChatGroup);
+        topPanel.add(onlineList);
         add(topPanel, BorderLayout.NORTH);
         
         // Create chat list
@@ -133,7 +143,44 @@ public class SidebarPanel extends JPanel {
             }
         });
     }
+    private void showNewGroupDialog() {
+    // Tìm JFrame cha
+    JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
     
+    // Tạo và hiển thị dialog
+    NewGroupDialog dialog = new NewGroupDialog(parent, data -> {
+        System.out.println("Creating group: " + data.groupName);
+        System.out.println("Members: " + data.memberIds);
+        
+        // Xử lý tạo group:
+        // 1. Gửi request tạo group lên server
+        try {
+            // Có thể gọi API tạo group ở đây
+            // createGroupOnServer(data.groupName, data.memberIds);
+            
+            // Sau khi tạo group thành công:
+            JOptionPane.showMessageDialog(
+                parent,
+                "Group '" + data.groupName + "' has been created successfully!",
+                "Group Created",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+            
+            // Refresh danh sách chat để hiển thị group mới
+            refreshChatList();
+            
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                parent,
+                "Failed to create group: " + ex.getMessage(),
+                                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    });
+    
+    dialog.setVisible(true);
+}
     private void addSampleData() {
         SwingUtilities.invokeLater(() -> {
             chatListModel.clear();
