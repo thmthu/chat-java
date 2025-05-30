@@ -66,40 +66,52 @@ public class ChatUI extends JFrame {
         // Set up send button action
         chatPanel.setSendMessageActionListener(e -> {
             String message = chatPanel.getMessageText();
-            if (!message.isEmpty()) {
+            String currentChatRoomId = chatPanel.getCurrentChatRoomId();
+            
+            if (!message.isEmpty() && currentChatRoomId != null) {
                 try {
-                    // Create JSON message
                     String userId = GlobalData.userId;
+                    String receiverId = extractReceiverId(currentChatRoomId, userId);
                     String timestamp = String.valueOf(System.currentTimeMillis());
                     
                     String jsonMessage = String.format(
                         "{\"senderId\":\"%s\",\"receiverId\":\"%s\",\"content\":\"%s\",\"timestamp\":\"%s\"}",
                         userId,
-                        "1", // Set the appropriate recipient ID
+                        receiverId, // Sử dụng receiverId được trích xuất từ chatRoomId
                         message,
                         timestamp
                     );
                     
-                    // Send through WebSocket
                     socketClient.sendMessage(jsonMessage);
-                    
-                    // Add message to UI (optimistic update)
                     chatPanel.addMessage(userId, message);
-                    
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
-                        this,
-                        "Failed to send message: " + ex.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE
-                    );
+                    // Error handling...
                 }
+            } else if (currentChatRoomId == null) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Please select a chat first",
+                    "No chat selected",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
             }
         });
+                sidebarPanel.setOnChatSelected(chatRoomId -> {
+                    chatPanel.setChatRoomId(chatRoomId);
+                });
 
-        // When chat room is selected (e.g., from sidebar)
-        chatPanel.setChatRoomId("2_1"); // Set the actual chat room ID
-        setVisible(true);
+                setVisible(true);
+            }
+    // Thêm method này vào ChatUI.java
+    private String extractReceiverId(String chatRoomId, String currentUserId) {
+        if (chatRoomId == null) return "";
+        
+        String[] ids = chatRoomId.split("_");
+        if (ids.length == 2) {
+            // Nếu chatRoomId có format "user1_user2", trả về ID không phải của người dùng hiện tại
+            return ids[0].equals(currentUserId) ? ids[1] : ids[0];
+        }
+        return "";
     }
 
     public static void main(String[] args) {

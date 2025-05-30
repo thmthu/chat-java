@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -33,7 +34,13 @@ public class SidebarPanel extends JPanel {
     private JFrame mainFrame;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Gson gson;
+    // Add a new field to hold the callback function
+    private Consumer<String> onChatSelected;
 
+    // Add this method to set the chat selection handler
+    public void setOnChatSelected(Consumer<String> onChatSelected) {
+        this.onChatSelected = onChatSelected;
+}
     public SidebarPanel(ActionListener onNewChatClicked) {
         // Initialize Gson with custom date time adapter
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -68,6 +75,14 @@ public class SidebarPanel extends JPanel {
         chatList.setCellRenderer(new ChatListCellRenderer());
         chatList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         
+        chatList.addListSelectionListener(e -> {
+        if (!e.getValueIsAdjusting()) {
+            ChatSidebarItem selectedItem = chatList.getSelectedValue();
+            if (selectedItem != null && onChatSelected != null) {
+                onChatSelected.accept(selectedItem.getChatRoomId());
+            }
+        }
+        });
         JScrollPane scrollPane = new JScrollPane(chatList);
         scrollPane.setBorder(null);
         add(scrollPane, BorderLayout.CENTER);

@@ -88,8 +88,13 @@ public class ChatPanel extends JPanel {
     
     // Set chat room ID and load messages
     public void setChatRoomId(String chatRoomId) {
+        System.out.println("Setting chat room ID: " + chatRoomId);
         this.chatRoomId = chatRoomId;
         loadMessages();
+    }
+    // Get the current chat room ID
+    public String getCurrentChatRoomId() {
+        return chatRoomId;
     }
     
     // Load messages from API
@@ -119,7 +124,7 @@ public class ChatPanel extends JPanel {
                     
                     Type listType = new TypeToken<ArrayList<ChatMessage>>(){}.getType();
                     List<ChatMessage> messages = gson.fromJson(response.toString(), listType);
-                    
+                    System.out.println("Loaded " + messages.size() + " messages for chat room: " + chatRoomId);
                     SwingUtilities.invokeLater(() -> {
                         messagesPanel.removeAll();
                         for (ChatMessage message : messages) {
