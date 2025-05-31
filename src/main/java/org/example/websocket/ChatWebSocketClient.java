@@ -1,6 +1,7 @@
 package org.example.websocket;
 
 import org.example.components.ChatPanel;
+import org.example.components.SidebarPanel;
 import org.example.data.GlobalData;
 
 import javax.websocket.*;
@@ -19,7 +20,7 @@ public class ChatWebSocketClient {
     private Session session;
     private ChatPanel chatPanel; // Thêm thuộc tính này
     private final Gson gson;
-
+    private SidebarPanel sidebarPanel;
     public ChatWebSocketClient() {
         // Khởi tạo Gson với xử lý đặc biệt cho LocalDateTime
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -43,7 +44,10 @@ public class ChatWebSocketClient {
     public void setChatPanel(ChatPanel chatPanel) {
         this.chatPanel = chatPanel;
     }
-
+    // Thêm phương thức setSidebarPanel
+    public void setSidebarPanel(SidebarPanel sidebarPanel) {
+        this.sidebarPanel = sidebarPanel;
+    }
     @OnOpen
     public void onOpen(Session session) {
         System.out.println("✅ Connected to server");
@@ -52,7 +56,6 @@ public class ChatWebSocketClient {
 
     @OnMessage
     public void onMessage(String message) {
-        System.out.println("📩 Message from server: " + message);
         
         if (chatPanel == null) {
             System.out.println("⚠️ Chat panel not set, ignoring message");
@@ -64,7 +67,7 @@ public class ChatWebSocketClient {
             MessagePayload payload = gson.fromJson(message, MessagePayload.class);
             
             // Xác định chatRoomId từ senderId và receiverId
-            String chatRoomId = normalizeChatRoomId(payload.senderId, payload.receiverId);
+            String chatRoomId = payload.chatRoomId;
             
             // Chỉ xử lý tin nhắn thuộc chatRoom hiện tại
             String currentChatRoomId = chatPanel.getCurrentChatRoomId();
@@ -72,8 +75,13 @@ public class ChatWebSocketClient {
                 // Chỉ hiển thị tin nhắn mới nếu không phải do chính người dùng gửi
                 // (vì tin nhắn của người dùng đã được thêm vào UI khi gửi đi)
                 if (!payload.senderId.equals(GlobalData.userId)) {
-                    chatPanel.addMessage(payload.senderId, payload.content);
+                    chatPanel.addMessage(payload.senderId, payload.senderName, payload.content);
                 }
+            }
+            // Cập nhật sidebar nếu có
+            if (sidebarPanel != null) {
+                System.out.println("✅ Received message for chat room: " + chatRoomId);
+                sidebarPanel.refreshChatList();
             }
         } catch (Exception e) {
             System.out.println("❌ Error processing message: " + e.getMessage());
@@ -97,7 +105,7 @@ public class ChatWebSocketClient {
     /**
      * Chuẩn hóa chatRoomId từ hai userId (giống server)
      */
-    private String normalizeChatRoomId(String userA, String userB) {
+    static public String normalizeChatRoomId(String userA, String userB) {
         return userA.compareTo(userB) > 0 ? userA + "_" + userB : userB + "_" + userA;
     }
     
@@ -109,5 +117,7 @@ public class ChatWebSocketClient {
         private String receiverId;
         private String content;
         private String timestamp;
+        private String chatRoomId; 
+         private String senderName;// Thêm trường này để xác định chat room
     }
 }

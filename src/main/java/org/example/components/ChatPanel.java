@@ -37,7 +37,7 @@ public class ChatPanel extends JPanel {
     private final Gson gson;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    
+    private SidebarPanel sidebarPanel;
     public ChatPanel() {
         // Initialize Gson with custom date time adapter
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -106,6 +106,9 @@ public class ChatPanel extends JPanel {
         this.chatRoomId = chatRoomId;
         loadMessages();
     }
+    public void setSidebarPanel(SidebarPanel sidebarPanel) {
+        this.sidebarPanel = sidebarPanel;
+    }   
     // Get the current chat room ID
     public String getCurrentChatRoomId() {
         return chatRoomId;
@@ -119,7 +122,7 @@ public class ChatPanel extends JPanel {
         
         executorService.submit(() -> {
             try {
-                String apiUrl = "http://localhost:8081/demo/list-message/" + chatRoomId;
+                String apiUrl = "http://localhost:8081/api/list-message/" + chatRoomId;
                 
                 URL url = new URL(apiUrl);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -142,6 +145,7 @@ public class ChatPanel extends JPanel {
                     SwingUtilities.invokeLater(() -> {
                         messagesPanel.removeAll();
                         for (ChatMessage message : messages) {
+                            System.out.println("Adding message: " + message.getContent() + " from " + message.getSenderName());
                             addMessageBubble(message);
                         }
                         
@@ -187,7 +191,23 @@ public class ChatPanel extends JPanel {
             bubble.setBackground(new Color(240, 240, 240));
             messagePanel.add(bubble, BorderLayout.WEST);
         }
-        
+          // Thêm sender name label vào messagePanel thay vì bubble
+    // Chỉ hiển thị nếu không phải tin nhắn của mình
+        if (!isSelf && message.getSenderName() != null && !message.getSenderName().isEmpty()) {
+            // Tạo panel riêng cho sender name để căn chỉnh đúng
+            JPanel senderNamePanel = new JPanel(new BorderLayout());
+            senderNamePanel.setOpaque(false);
+            
+            JLabel senderNameLabel = new JLabel(message.getSenderName());
+            senderNameLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            senderNameLabel.setForeground(Color.decode("#99CCFF"));
+            
+            // Đặt sender name ở bên phải (EAST)
+            senderNamePanel.add(senderNameLabel, BorderLayout.WEST);
+            
+            // Thêm senderNamePanel vào phía trên của messagePanel
+            messagePanel.add(senderNamePanel, BorderLayout.NORTH);
+        }
         // Message text - sử dụng JTextArea thay vì JLabel
         JTextArea contentLabel = new JTextArea(message.getContent());
         System.out.println("Adding message: " + message.getContent());
@@ -230,20 +250,21 @@ public class ChatPanel extends JPanel {
         
         messagesPanel.add(messagePanel);
         messagesPanel.add(Box.createVerticalStrut(5));
+        //sidebarPanel.refreshChatList();
     }
      
     // Add a message programmatically (for new messages)
-    public void addMessage(String senderId, String content) {
+    public void addMessage(String senderId, String senderName, String content) {
         ChatMessage message = new ChatMessage();
         message.setChatRoomId(chatRoomId);
         message.setSenderId(senderId);
         message.setContent(content);
         message.setSentAt(LocalDateTime.now());
-        
+        message.setSenderName(senderName);
         addMessageBubble(message);
         messagesPanel.revalidate();
         messagesPanel.repaint();
-        
+        sidebarPanel.refreshChatList();
         // Scroll to bottom
         SwingUtilities.invokeLater(() -> {
             JScrollBar verticalBar = scrollPane.getVerticalScrollBar();

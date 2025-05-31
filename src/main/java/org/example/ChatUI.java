@@ -24,24 +24,28 @@ public class ChatUI extends JFrame {
 
         SidebarPanel sidebarPanel = new SidebarPanel(e -> {
             NewChatDialog dialog = new NewChatDialog(this, data -> {
-                System.out.println("Send to: " + data.recipient);
-                System.out.println("Message: " + data.message);
-                
+            
                 try {
-                    // Create JSON message in the format expected by the server
-                    String userId = GlobalData.userId; // You should replace this with actual logged-in user ID
+                   String userId = GlobalData.userId;
+                    String receiverId = data.recipient;
                     String timestamp = String.valueOf(System.currentTimeMillis());
                     
+                    // Tạo chatRoomId cho direct chat
+                    String chatRoomId = ChatWebSocketClient.normalizeChatRoomId(userId, receiverId);
+                    
                     String jsonMessage = String.format(
-                        "{\"senderId\":\"%s\",\"receiverId\":\"%s\",\"content\":\"%s\",\"timestamp\":\"%s\"}",
+                        "{\"senderId\":\"%s\",\"receiverId\":\"%s\",\"content\":\"%s\",\"timestamp\":\"%s\",\"chatRoomId\":\"%s\"}",
                         userId,
-                        data.recipient,
+                        receiverId,
                         data.message,
-                        timestamp
+                        timestamp,
+                        chatRoomId
                     );
                     
                     // Send through WebSocket connection
                     socketClient.sendMessage(jsonMessage);
+                    
+                    // Refresh chat list
                     
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(
@@ -71,19 +75,35 @@ public class ChatUI extends JFrame {
             if (!message.isEmpty() && currentChatRoomId != null) {
                 try {
                     String userId = GlobalData.userId;
-                    String receiverId = extractReceiverId(currentChatRoomId, userId);
+                    String receiverId;
+                    
+                    // Kiểm tra nếu là group chat (bắt đầu bằng "group_")
+                    boolean isGroupChat = currentChatRoomId.startsWith("group_");
+                    
+                    if (isGroupChat) {
+                        // Nếu là group chat, receiverId = "group"
+                        receiverId = "group";
+                    } else {
+                        // Nếu là direct chat, extract receiverId từ chatRoomId
+                        receiverId = extractReceiverId(currentChatRoomId, userId);
+                    }
+                    
                     String timestamp = String.valueOf(System.currentTimeMillis());
                     
+                    // Thêm chatRoomId vào JSON
                     String jsonMessage = String.format(
-                        "{\"senderId\":\"%s\",\"receiverId\":\"%s\",\"content\":\"%s\",\"timestamp\":\"%s\"}",
+                        "{\"senderId\":\"%s\",\"receiverId\":\"%s\",\"content\":\"%s\",\"timestamp\":\"%s\",\"chatRoomId\":\"%s\"}",
                         userId,
-                        receiverId, // Sử dụng receiverId được trích xuất từ chatRoomId
+                        receiverId,
                         message,
-                        timestamp
+                        timestamp,
+                        currentChatRoomId
                     );
                     
                     socketClient.sendMessage(jsonMessage);
-                    chatPanel.addMessage(userId, message);
+                    chatPanel.addMessage(userId,"", message);
+            
+                  
                 } catch (Exception ex) {
                     // Error handling...
                 }
@@ -101,6 +121,10 @@ public class ChatUI extends JFrame {
                 });
 
                 setVisible(true);
+                socketClient.setChatPanel(chatPanel);
+                socketClient.setSidebarPanel(sidebarPanel);
+                chatPanel.setSidebarPanel(sidebarPanel);
+
             }
     // Thêm method này vào ChatUI.java
     private String extractReceiverId(String chatRoomId, String currentUserId) {

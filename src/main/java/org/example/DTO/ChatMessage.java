@@ -7,6 +7,7 @@ public class ChatMessage {
     private String senderId;
     private String content;
     private LocalDateTime sentAt;
+    private String senderName;
     
     // Getters and setters
     public String getChatRoomId() { return chatRoomId; }
@@ -20,4 +21,7 @@ public class ChatMessage {
     
     public LocalDateTime getSentAt() { return sentAt; }
     public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
+
+    public String getSenderName() { return senderName; }
+    public void setSenderName(String senderName) { this.senderName = senderName; }
 }

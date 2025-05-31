@@ -84,7 +84,6 @@ public class ChatListCellRenderer extends JPanel implements ListCellRenderer<Cha
         //avatarLabel.setText(""); // Clear any text
     } catch (Exception e) {
         // Fallback to text avatar if image loading fails
-        System.err.println("Failed to load avatar image: " + e.getMessage());
         avatarLabel.setIcon(null);
         avatarLabel.setText(value.getSenderName().substring(0, 1).toUpperCase());
     }

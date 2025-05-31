@@ -64,7 +64,7 @@ public class SidebarPanel extends JPanel {
         JButton newChatGroup = new ButtonCustom("+ New Group");
         newChatGroup.addActionListener(e -> showNewGroupDialog());
 
-         JButton onlineList = new ButtonCustom("Online");
+        JButton onlineList = new ButtonCustom("Online");
         newChatButton.addActionListener(onNewChatClicked);
         
         // Add the button to a panel at the top
@@ -105,7 +105,7 @@ public class SidebarPanel extends JPanel {
         executorService.submit(() -> {
             try {
                 String userId = GlobalData.userId;
-                String apiUrl = "http://localhost:8081/demo/list-message-side-bar/" + userId;
+                String apiUrl = "http://localhost:8081/api/list-message-side-bar/" + userId;
                 System.out.println("Fetching chat data from: " + apiUrl);
                 URL url = new URL(apiUrl);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
