@@ -248,6 +248,7 @@ public class AttachmentUtil {
      */
     public static void downloadFile(JPanel parent, String fileUrl, String fileName, ExecutorService executorService) {
         // Create a file chooser for saving
+
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Save File");
         fileChooser.setSelectedFile(new File(fileName));
@@ -273,28 +274,9 @@ public class AttachmentUtil {
                 try {
                     // Start dialog on EDT
                     SwingUtilities.invokeLater(() -> dialog.setVisible(true));
-                    
-                    // Replace the current URL creation code in downloadFile method (around line 284)
-                    String processedUrl = fileName;
-                     
-                // Find the LAST colon in the URL, which separates fileId from filename
-                int lastColonIndex = processedUrl.lastIndexOf(":");
-                
-                if (lastColonIndex > 0) {
-                    processedUrl = processedUrl.substring(0, lastColonIndex);
-                    System.out.println("Removed text after last colon: " + processedUrl);
-                }
-                
-                // Add http: prefix if it starts with //
-                if (processedUrl.startsWith("//")) {
-                    processedUrl = "http:" + processedUrl;
-                    System.out.println("Added http prefix: " + processedUrl);
-                }
-                
+                        
                
-                    
-                    System.out.println("Final download URL: " + processedUrl);
-                    URL url = new URL(processedUrl);
+                    URL url = new URL(fileUrl);
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("GET");
                     connection.setRequestProperty("User-ID", GlobalData.userId);

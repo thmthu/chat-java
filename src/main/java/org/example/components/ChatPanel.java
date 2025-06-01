@@ -356,15 +356,14 @@ public class ChatPanel extends JPanel {
         
         // Check if this is a file message
         String content = message.getContent();
-        if (content.startsWith("FILE:")) {
+        if (content.startsWith("FILE")) {
             // Extract file URL and name
-            String[] parts = content.split(":", 3);
+            String[] parts = content.split("=", 3);
             if (parts.length >= 3) {
-                String fileUrl = parts[1];
-                String fileName = parts[2];
-                int lastColonIndex = fileName.lastIndexOf(":");
-                String realName = fileName.substring(lastColonIndex + 1);
-                System.out.println("===File URL: " + fileUrl + "\n===File Name: " + fileName);
+                String fileName = parts[1];
+                String fileUrl = parts[2];
+
+                
                 // Create file attachment panel
                 JPanel filePanel = new JPanel();
                 filePanel.setLayout(new BoxLayout(filePanel, BoxLayout.X_AXIS));
@@ -372,11 +371,11 @@ public class ChatPanel extends JPanel {
                 filePanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
                 
                 // File icon
-                JLabel fileIcon = new JLabel("File: ");
+                JLabel fileIcon = new JLabel("File");
                 fileIcon.setFont(new Font("Arial", Font.BOLD, 22));
                 fileIcon.setForeground(isSelf ? Color.WHITE : Color.decode("#99CCFF"));                
                 // File name as a clickable link
-                JButton fileLink = new JButton(realName);
+                JButton fileLink = new JButton(fileName);
                 fileLink.setBorderPainted(false);
                 fileLink.setContentAreaFilled(false);
                 fileLink.setForeground(isSelf ? Color.WHITE : Color.BLUE);
