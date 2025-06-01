@@ -4,6 +4,7 @@ import org.example.components.ChatPanel;
 import org.example.components.SidebarPanel;
 import org.example.data.GlobalData;
 
+import javax.swing.SwingUtilities;
 import javax.websocket.*;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -44,7 +45,11 @@ public class ChatWebSocketClient {
             return;
         }
         System.out.println("================= Received message: " + message);
-        
+        if (message.contains("\"type\":\"MESSAGE_DELETED\"")) {
+        handleWebSocketMessage(message);
+        return;
+    }
+
         try {
             // Parse JSON message
             MessagePayload payload = gson.fromJson(message, MessagePayload.class);
@@ -121,7 +126,29 @@ public class ChatWebSocketClient {
                 e.printStackTrace();
             }
         }
+        // Call this from your WebSocket message handler
+        // Không cần import org.json
+        // Thêm class phụ để parse MESSAGE_DELETED
+        private static class MessageDeletedPayload {
+            String type;
+            String chatRoomId;
+            String messageId;
+            String deletedBy;
+            long timestamp;
+        }
 
+        public void handleWebSocketMessage(String json) {
+            try {
+                MessageDeletedPayload data = gson.fromJson(json, MessageDeletedPayload.class);
+                if ("MESSAGE_DELETED".equals(data.type)) {
+                    if (chatPanel != null && data.chatRoomId.equals(chatPanel.getCurrentChatRoomId())) {
+                        SwingUtilities.invokeLater(() -> chatPanel.removeMessageById(data.messageId));
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
         // Add a method to connect after login
         public void connectAfterLogin() {
             if (session != null && session.isOpen()) {

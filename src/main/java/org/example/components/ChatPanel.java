@@ -318,7 +318,19 @@ public class ChatPanel extends JPanel {
             }
         });
     }
-    
+    public void removeMessageById(String messageId) {
+    if (messageId == null) return;
+    Component[] components = messagesPanel.getComponents();
+    for (Component comp : components) {
+        if (comp instanceof JPanel && messageId.equals(
+                ((JPanel) comp).getName() != null ? ((JPanel) comp).getName().replace("message-", "") : null)) {
+            messagesPanel.remove(comp);
+            messagesPanel.revalidate();
+            messagesPanel.repaint();
+            break;
+        }
+    }
+}
     public void addMessageBubble(ChatMessage message) {
         boolean isSelf = message.getSenderId().equals(GlobalData.userId);
         
@@ -328,6 +340,9 @@ public class ChatPanel extends JPanel {
         messagePanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         messagePanel.setLayout(new FlowLayout(isSelf ? FlowLayout.RIGHT : FlowLayout.LEFT, 0, 0));
         messagePanel.setOpaque(false);
+         if (message.getMessageId() != null) {
+        messagePanel.setName("message-" + message.getMessageId());
+    }
         // Message bubble
         JPanel bubble = new JPanel();
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
@@ -355,8 +370,30 @@ public class ChatPanel extends JPanel {
 
         // Add senderNamePanel directly to messagesPanel before messagePanel
         messagesPanel.add(senderNamePanel);
+    
     }
-        
+        if (isSelf && message.getMessageId() != null) {
+    JPopupMenu popupMenu = new JPopupMenu();
+    JMenuItem deleteItem = new JMenuItem("Delete");
+    popupMenu.add(deleteItem);
+
+    deleteItem.addActionListener(e -> {
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Delete this message?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        if (confirm == JOptionPane.YES_OPTION) {
+            deleteMessageById(message.getMessageId(), messagePanel);
+            System.out.println("Message deleted: " + message.getMessageId());
+        }
+    });
+
+    bubble.setComponentPopupMenu(popupMenu);
+    messagePanel.setComponentPopupMenu(popupMenu);
+}
         // Check if this is a file message
         String content = message.getContent();
         if (content.startsWith("FILE")) {
@@ -544,7 +581,46 @@ public class ChatPanel extends JPanel {
             }
         });
     }
-    
+
+    private void deleteMessageById(String messageId, JPanel messagePanel) {
+    executorService.submit(() -> {
+        try {
+            String apiUrl = "http://localhost:8081/api/messages/" + messageId;
+            URL url = new URL(apiUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("User-ID", GlobalData.userId);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                SwingUtilities.invokeLater(() -> {
+                    messagesPanel.remove(messagePanel);
+                    messagesPanel.revalidate();
+                    messagesPanel.repaint();
+                });
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to delete message. Error code: " + responseCode,
+                        "Delete Error",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                });
+            }
+             } catch (Exception ex) {
+            ex.printStackTrace();
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Error deleting message: " + ex.getMessage(),
+                    "Delete Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            });
+        }
+    });
+}
     // Clear the chat panel
     public void clearChat() {
         this.chatRoomId = null;

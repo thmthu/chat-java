@@ -8,6 +8,8 @@ public class ChatMessage {
     private String content;
     private LocalDateTime sentAt;
     private String senderName;
+    private String messageId;
+
     
     // Getters and setters
     public String getChatRoomId() { return chatRoomId; }
@@ -24,4 +26,7 @@ public class ChatMessage {
 
     public String getSenderName() { return senderName; }
     public void setSenderName(String senderName) { this.senderName = senderName; }
+
+    public String getMessageId() { return messageId; }
+    public void setMessageId(String messageId) { this.messageId = messageId; }
 }
