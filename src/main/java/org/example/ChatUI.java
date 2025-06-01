@@ -14,7 +14,11 @@ import java.awt.*;
 
 public class ChatUI extends JFrame {
     private final ChatWebSocketClient socketClient = new ChatWebSocketClient();
-    
+    // Add this method to the ChatUI class
+
+    public ChatWebSocketClient getSocketClient() {
+        return socketClient;
+    }
     public ChatUI() {
         setTitle("Hello " + GlobalData.userId + " - Chat App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

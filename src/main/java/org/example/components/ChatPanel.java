@@ -2,12 +2,15 @@ package org.example.components;
 
 import org.example.data.GlobalData;
 import org.example.DTO.ChatMessage;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import org.example.utils.AttachmentUtil;
+import org.example.ChatUI;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -18,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.io.File;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -40,6 +44,7 @@ public class ChatPanel extends JPanel {
     private SidebarPanel sidebarPanel;
     private JLabel chatTitleLabel;
     private JButton deleteButton;
+    
     public ChatPanel() {
         // Initialize Gson with custom date time adapter
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -59,8 +64,6 @@ public class ChatPanel extends JPanel {
         messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
         messagesPanel.setBackground(Color.WHITE);
         messagesPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        // THÊM DÒNG NÀY: Đảm bảo messagesPanel sử dụng đủ không gian ngang
         messagesPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         messagesPanel.setAlignmentY(Component.TOP_ALIGNMENT);
         
@@ -71,35 +74,26 @@ public class ChatPanel extends JPanel {
         scrollPane = new JScrollPane(messagesPanel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        add(scrollPane, BorderLayout.CENTER);
-        
-        // Input panel at the bottom
-        JPanel inputPanel = new JPanel(new BorderLayout(10, 0));
-        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        inputPanel.setBackground(Color.WHITE);
-        
-        messageField = new JTextField();
-        messageField.setFont(new Font("Arial", Font.PLAIN, 14));
-        messageField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200), 1, true),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        
-        sendButton = new ButtonCustom("Send");
-        
-        inputPanel.add(messageField, BorderLayout.CENTER);
-        inputPanel.add(sendButton, BorderLayout.EAST);
-        
-        add(inputPanel, BorderLayout.SOUTH);
-        addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(ComponentEvent e) {
-                    refreshLayout();
-                }
-            });
-                // Add this code in the ChatPanel constructor, after the layout setup but before adding the input panel
         
         // Create chat header panel with title and delete button
+        JPanel headerPanel = createHeaderPanel();
+        
+        // Input panel at the bottom
+        JPanel inputPanel = createInputPanel();
+        
+        add(headerPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+        add(inputPanel, BorderLayout.SOUTH);
+        
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                refreshLayout();
+            }
+        });
+    }
+    
+    private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -108,13 +102,13 @@ public class ChatPanel extends JPanel {
         ));
         
         // Chat title label on the left
-        JLabel chatTitleLabel = new JLabel("Select a chat");
+        chatTitleLabel = new JLabel("Select a chat");
         chatTitleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         chatTitleLabel.setForeground(Color.decode("#666666"));
         headerPanel.add(chatTitleLabel, BorderLayout.WEST);
         
         // Delete button on the right
-        JButton deleteButton = new JButton("Delete Chat");
+        deleteButton = new JButton("Delete");
         deleteButton.setForeground(Color.WHITE);
         deleteButton.setBackground(Color.decode("#FF6B6B"));
         deleteButton.setBorderPainted(false);
@@ -176,20 +170,54 @@ public class ChatPanel extends JPanel {
         });
         
         headerPanel.add(deleteButton, BorderLayout.EAST);
+        return headerPanel;
+    }
+    
+    private JPanel createInputPanel() {
+        JPanel inputPanel = new JPanel(new BorderLayout(10, 0));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        inputPanel.setBackground(Color.WHITE);
         
-        // Add header to the panel
-        add(headerPanel, BorderLayout.NORTH);
+        messageField = new JTextField();
+        messageField.setFont(new Font("Arial", Font.PLAIN, 14));
+        messageField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200), 1, true),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
         
-        // Save references to update later
-        this.chatTitleLabel = chatTitleLabel;
-        this.deleteButton = deleteButton;
-        }
+        JButton attachButton = new JButton("📎");
+        attachButton.setBorderPainted(false);
+        attachButton.setContentAreaFilled(false);
+        attachButton.setFocusPainted(false);
+        attachButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        attachButton.setToolTipText("Attach file");
+        Font currentFont = attachButton.getFont();
+        Font boldLargerFont = currentFont.deriveFont(Font.BOLD, 25f);
+        attachButton.setFont(boldLargerFont);        
+        attachButton.setForeground(Color.decode("#99CCFF"));
+        // Use attachment utility for file handling
+        attachButton.addActionListener(e -> {
+            Component mainFrame = SwingUtilities.getWindowAncestor(this);
+            AttachmentUtil.handleFileAttachment(this, chatRoomId, executorService, 
+                                             messagesPanel, scrollPane, 
+                                             sidebarPanel, mainFrame);
+        });
+        
+        sendButton = new ButtonCustom("Send");
+        
+        inputPanel.add(messageField, BorderLayout.CENTER);
+        inputPanel.add(sendButton, BorderLayout.EAST);
+        inputPanel.add(attachButton, BorderLayout.WEST);
+        
+        return inputPanel;
+    }
+    
     private void refreshLayout() {
         messagesPanel.revalidate();
         messagesPanel.repaint();
     }
+    
     // Set chat room ID and load messages
-        // Modify the setChatRoomId method
     public void setChatRoomId(String chatRoomId) {
         System.out.println("Setting chat room ID: " + chatRoomId);
         this.chatRoomId = chatRoomId;
@@ -225,9 +253,11 @@ public class ChatPanel extends JPanel {
         
         loadMessages();
     }
+    
     public void setSidebarPanel(SidebarPanel sidebarPanel) {
         this.sidebarPanel = sidebarPanel;
     }   
+    
     // Get the current chat room ID
     public String getCurrentChatRoomId() {
         return chatRoomId;
@@ -261,6 +291,7 @@ public class ChatPanel extends JPanel {
                     Type listType = new TypeToken<ArrayList<ChatMessage>>(){}.getType();
                     List<ChatMessage> messages = gson.fromJson(response.toString(), listType);
                     System.out.println("Loaded " + messages.size() + " messages for chat room: " + chatRoomId);
+                    
                     SwingUtilities.invokeLater(() -> {
                         messagesPanel.removeAll();
                         for (ChatMessage message : messages) {
@@ -288,7 +319,6 @@ public class ChatPanel extends JPanel {
         });
     }
     
-        // Add a single message bubble to the chat
     public void addMessageBubble(ChatMessage message) {
         boolean isSelf = message.getSenderId().equals(GlobalData.userId);
         
@@ -304,16 +334,15 @@ public class ChatPanel extends JPanel {
         
         // Set alignment and style based on sender
         if (isSelf) {
-            bubble.setBackground(new Color(0, 132, 255));
+            bubble.setBackground(Color.decode("#578FCA"));
             messagePanel.add(bubble, BorderLayout.EAST);
         } else {
             bubble.setBackground(new Color(240, 240, 240));
             messagePanel.add(bubble, BorderLayout.WEST);
         }
-          // Thêm sender name label vào messagePanel thay vì bubble
-    // Chỉ hiển thị nếu không phải tin nhắn của mình
+        
+        // Add sender name label - only for messages from others
         if (!isSelf && message.getSenderName() != null && !message.getSenderName().isEmpty()) {
-            // Tạo panel riêng cho sender name để căn chỉnh đúng
             JPanel senderNamePanel = new JPanel(new BorderLayout());
             senderNamePanel.setOpaque(false);
             
@@ -321,15 +350,75 @@ public class ChatPanel extends JPanel {
             senderNameLabel.setFont(new Font("Arial", Font.BOLD, 12));
             senderNameLabel.setForeground(Color.decode("#99CCFF"));
             
-            // Đặt sender name ở bên phải (EAST)
             senderNamePanel.add(senderNameLabel, BorderLayout.WEST);
-            
-            // Thêm senderNamePanel vào phía trên của messagePanel
             messagePanel.add(senderNamePanel, BorderLayout.NORTH);
         }
-        // Message text - sử dụng JTextArea thay vì JLabel
-        JTextArea contentLabel = new JTextArea(message.getContent());
-        System.out.println("Adding message: " + message.getContent());
+        
+        // Check if this is a file message
+        String content = message.getContent();
+        if (content.startsWith("FILE:")) {
+            // Extract file URL and name
+            String[] parts = content.split(":", 3);
+            if (parts.length >= 3) {
+                String fileUrl = parts[1];
+                String fileName = parts[2];
+                int lastColonIndex = fileName.lastIndexOf(":");
+                String realName = fileName.substring(lastColonIndex + 1);
+                System.out.println("===File URL: " + fileUrl + "\n===File Name: " + fileName);
+                // Create file attachment panel
+                JPanel filePanel = new JPanel();
+                filePanel.setLayout(new BoxLayout(filePanel, BoxLayout.X_AXIS));
+                filePanel.setBackground(bubble.getBackground());
+                filePanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                
+                // File icon
+                JLabel fileIcon = new JLabel("File: ");
+                fileIcon.setFont(new Font("Arial", Font.BOLD, 22));
+                fileIcon.setForeground(isSelf ? Color.WHITE : Color.decode("#99CCFF"));                
+                // File name as a clickable link
+                JButton fileLink = new JButton(realName);
+                fileLink.setBorderPainted(false);
+                fileLink.setContentAreaFilled(false);
+                fileLink.setForeground(isSelf ? Color.WHITE : Color.BLUE);
+                fileLink.setFont(new Font("Arial", Font.PLAIN, 14));
+                fileLink.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                fileLink.setToolTipText("Click to download");
+                
+                // Add download action using AttachmentUtil
+                fileLink.addActionListener(e -> {
+                    AttachmentUtil.downloadFile(this, fileUrl, fileName, executorService);
+                });
+                
+                filePanel.add(fileIcon);
+                filePanel.add(Box.createHorizontalStrut(5));
+                filePanel.add(fileLink);
+                
+                bubble.add(filePanel);
+            } else {
+                // Fallback to regular text display if format is wrong
+                addRegularTextContent(bubble, content, isSelf);
+            }
+        } else {
+            // Regular text message
+            addRegularTextContent(bubble, content, isSelf);
+        }
+        
+        // Time label
+        JLabel timeLabel = new JLabel(message.getSentAt().format(TIME_FORMATTER));
+        timeLabel.setFont(new Font("Arial", Font.PLAIN, 10));
+        timeLabel.setForeground(isSelf ? new Color(220, 220, 220) : Color.GRAY);
+        timeLabel.setAlignmentX(isSelf ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
+        
+        bubble.add(Box.createVerticalStrut(3)); // Spacing
+        bubble.add(timeLabel);
+        
+        messagesPanel.add(messagePanel);
+        messagesPanel.add(Box.createVerticalStrut(5));
+    }
+    
+    // Helper method to add regular text content to a bubble
+    private void addRegularTextContent(JPanel bubble, String content, boolean isSelf) {
+        JTextArea contentLabel = new JTextArea(content);
         contentLabel.setEditable(false);
         contentLabel.setLineWrap(true);
         contentLabel.setWrapStyleWord(true);
@@ -338,40 +427,22 @@ public class ChatPanel extends JPanel {
         contentLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         contentLabel.setBorder(null);
         
-        // Thiết lập kích thước cố định cho vùng chứa tin nhắn
-        int contentLength = message.getContent().length();
+        // Size adjustment based on content length
+        int contentLength = content.length();
         int preferredWidth;
-
+        
         if (contentLength <= 5) {
-            // Tin nhắn rất ngắn (như "mi", "ok", "hello")
-            preferredWidth = contentLength * 5 + 5; // Thêm padding
+            preferredWidth = contentLength * 5 + 5;
         } else if (contentLength <= 20) {
-            // Tin nhắn độ dài trung bình
             preferredWidth = contentLength * 5 + 5;
         } else {
-            // Tin nhắn dài
             preferredWidth = Math.min(300, contentLength * 5 + 5);
         }
-                contentLabel.setPreferredSize(new Dimension(preferredWidth, contentLabel.getPreferredSize().height));        
-        // Time label
-        JLabel timeLabel = new JLabel(message.getSentAt().format(TIME_FORMATTER));
-        timeLabel.setFont(new Font("Arial", Font.PLAIN, 10));
-        timeLabel.setForeground(isSelf ? new Color(220, 220, 220) : Color.GRAY);
-        timeLabel.setAlignmentX(isSelf ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
         
+        contentLabel.setPreferredSize(new Dimension(preferredWidth, contentLabel.getPreferredSize().height));
         bubble.add(contentLabel);
-        bubble.add(Box.createVerticalStrut(3)); // Spacing
-        bubble.add(timeLabel);
-        
-        
-        // Đảm bảo messagePanel có chiều rộng đầy đủ
-        //messagePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, messagePanel.getPreferredSize().height));
-        
-        messagesPanel.add(messagePanel);
-        messagesPanel.add(Box.createVerticalStrut(5));
-        //sidebarPanel.refreshChatList();
     }
-     
+    
     // Add a message programmatically (for new messages)
     public void addMessage(String senderId, String senderName, String content) {
         ChatMessage message = new ChatMessage();
@@ -412,7 +483,8 @@ public class ChatPanel extends JPanel {
     public void refreshMessages() {
         loadMessages();
     }
-        // Add this method to the ChatPanel class
+    
+    // Delete a chat room
     private void deleteChatRoom(String chatRoomId, JLabel chatTitleLabel, JButton deleteButton) {
         executorService.submit(() -> {
             try {
@@ -471,7 +543,7 @@ public class ChatPanel extends JPanel {
         });
     }
     
-    // Add this method to clear the chat
+    // Clear the chat panel
     public void clearChat() {
         this.chatRoomId = null;
         
