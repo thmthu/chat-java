@@ -6,14 +6,17 @@ import org.example.components.SidebarPanel;
 import org.example.data.GlobalData;
 import org.example.websocket.ChatWebSocketClient;
 import org.example.components.NewChatDialog;
+import org.example.components.ButtonCustom;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class ChatUI extends JFrame {
     private final ChatWebSocketClient socketClient = new ChatWebSocketClient();
+    
     public ChatUI() {
-        setTitle("Chat Application");
+        setTitle("Hello " + GlobalData.userId + " - Chat App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
@@ -21,6 +24,37 @@ public class ChatUI extends JFrame {
         JPanel mainPanel = new JPanel(new BorderLayout());
         getContentPane().add(mainPanel);
 
+        // Create the header panel with logout button
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        // Create app title for the left side of header
+        JLabel appTitle = new JLabel("Hello " + GlobalData.userId + " - Chat App");
+        appTitle.setFont(new Font("Arial", Font.BOLD, 18));
+        appTitle.setForeground(Color.decode("#99CCFF"));
+        headerPanel.add(appTitle, BorderLayout.WEST);
+        
+        // Create logout button for the right side of header
+        
+        JButton logoutButton = new ButtonCustom("Logout");
+        // Add action listener to logout button
+        logoutButton.addActionListener(e -> {
+            // Clear user session data
+            GlobalData.userId = null;
+            
+            // Close WebSocket connection
+            socketClient.closeConnection();
+            
+            // Close current window and open login screen
+            dispose();
+            new LoginUI().setVisible(true);
+        });
+        
+        headerPanel.add(logoutButton, BorderLayout.EAST);
+        
+        // Add header panel to the top of the main panel
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
 
         SidebarPanel sidebarPanel = new SidebarPanel(e -> {
             NewChatDialog dialog = new NewChatDialog(this, data -> {
@@ -61,6 +95,7 @@ public class ChatUI extends JFrame {
         });
 
         ChatPanel chatPanel = new ChatPanel();
+        
 
         mainPanel.add(sidebarPanel, BorderLayout.WEST);
         mainPanel.add(chatPanel, BorderLayout.CENTER);
@@ -124,6 +159,7 @@ public class ChatUI extends JFrame {
                 socketClient.setChatPanel(chatPanel);
                 socketClient.setSidebarPanel(sidebarPanel);
                 chatPanel.setSidebarPanel(sidebarPanel);
+                socketClient.connectAfterLogin();
 
             }
     // Thêm method này vào ChatUI.java
@@ -138,7 +174,12 @@ public class ChatUI extends JFrame {
         return "";
     }
 
+   // Just modify the main method:
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(ChatUI::new);
+        SwingUtilities.invokeLater(() -> {
+            // Start with login UI instead of directly opening ChatUI
+            new LoginUI().setVisible(true);
+        });
     }
 }

@@ -21,25 +21,7 @@ public class ChatWebSocketClient {
     private ChatPanel chatPanel; // Thêm thuộc tính này
     private final Gson gson;
     private SidebarPanel sidebarPanel;
-    public ChatWebSocketClient() {
-        // Khởi tạo Gson với xử lý đặc biệt cho LocalDateTime
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
-            @Override
-            public LocalDateTime deserialize(JsonElement json, Type type, JsonDeserializationContext context) {
-                return LocalDateTime.parse(json.getAsString());
-            }
-        });
-        gson = gsonBuilder.create();
-        
-        try {
-            WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-            container.connectToServer(this, new URI("ws://localhost:8081/ws/chat"));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
+    
     // Thêm phương thức setChatPanel
     public void setChatPanel(ChatPanel chatPanel) {
         this.chatPanel = chatPanel;
@@ -61,6 +43,7 @@ public class ChatWebSocketClient {
             System.out.println("⚠️ Chat panel not set, ignoring message");
             return;
         }
+        System.out.println("================= Received message: " + message);
         
         try {
             // Parse JSON message
@@ -80,7 +63,7 @@ public class ChatWebSocketClient {
             }
             // Cập nhật sidebar nếu có
             if (sidebarPanel != null) {
-                System.out.println("✅ Received message for chat room: " + chatRoomId);
+                System.out.println("Received message for chat room: " + chatRoomId);
                 sidebarPanel.refreshChatList();
             }
         } catch (Exception e) {
@@ -108,7 +91,67 @@ public class ChatWebSocketClient {
     static public String normalizeChatRoomId(String userA, String userB) {
         return userA.compareTo(userB) > 0 ? userA + "_" + userB : userB + "_" + userA;
     }
-    
+    // Add this method to the ChatWebSocketClient class
+        public ChatWebSocketClient() {
+            // Khởi tạo Gson với xử lý đặc biệt cho LocalDateTime
+            GsonBuilder gsonBuilder = new GsonBuilder();
+            gsonBuilder.registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+                @Override
+                public LocalDateTime deserialize(JsonElement json, Type type, JsonDeserializationContext context) {
+                    return LocalDateTime.parse(json.getAsString());
+                }
+            });
+            gson = gsonBuilder.create();
+            
+            try {
+                // Check if user is logged in
+                if (GlobalData.userId == null || GlobalData.userId.isEmpty()) {
+                    System.out.println("⚠️ User ID not available yet. WebSocket connection will be established later.");
+                    return;
+                }
+                
+                // Create connection URL with user ID as query parameter
+                String wsUrl = "ws://localhost:8081/ws/chat?userId=" + GlobalData.userId;
+                WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+                container.connectToServer(this, new URI(wsUrl));
+                
+                System.out.println("🔄 Connecting to WebSocket server with user ID: " + GlobalData.userId);
+            } catch (Exception e) {
+                System.out.println("❌ Failed to connect to WebSocket server: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        // Add a method to connect after login
+        public void connectAfterLogin() {
+            if (session != null && session.isOpen()) {
+                System.out.println("WebSocket already connected");
+                return;
+            }
+            
+            try {
+                // Create connection URL with user ID
+                String wsUrl = "ws://localhost:8081/ws/chat?userId=" + GlobalData.userId;
+                WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+                container.connectToServer(this, new URI(wsUrl));
+                
+                System.out.println("🔄 Connected to WebSocket server with user ID: " + GlobalData.userId);
+            } catch (Exception e) {
+                System.out.println("❌ Failed to connect to WebSocket server: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        public void closeConnection() {
+            if (session != null && session.isOpen()) {
+                try {
+                    session.close();
+                    System.out.println("WebSocket connection closed by user logout");
+                } catch (Exception e) {
+                    System.out.println("Error closing WebSocket connection: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
     /**
      * Class đại diện cho cấu trúc tin nhắn từ server
      */

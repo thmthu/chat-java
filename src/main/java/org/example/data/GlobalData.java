@@ -1,5 +1,5 @@
 package org.example.data;
 
 public class GlobalData {
-    public static String userId = "2";
+    public static String userId = null;
 }

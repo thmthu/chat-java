@@ -38,6 +38,8 @@ public class ChatPanel extends JPanel {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     private SidebarPanel sidebarPanel;
+    private JLabel chatTitleLabel;
+    private JButton deleteButton;
     public ChatPanel() {
         // Initialize Gson with custom date time adapter
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -95,15 +97,132 @@ public class ChatPanel extends JPanel {
                     refreshLayout();
                 }
             });
+                // Add this code in the ChatPanel constructor, after the layout setup but before adding the input panel
+        
+        // Create chat header panel with title and delete button
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
+            BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        
+        // Chat title label on the left
+        JLabel chatTitleLabel = new JLabel("Select a chat");
+        chatTitleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        chatTitleLabel.setForeground(Color.decode("#666666"));
+        headerPanel.add(chatTitleLabel, BorderLayout.WEST);
+        
+        // Delete button on the right
+        JButton deleteButton = new JButton("Delete Chat");
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setBackground(Color.decode("#FF6B6B"));
+        deleteButton.setBorderPainted(false);
+        deleteButton.setFocusPainted(false);
+        deleteButton.setEnabled(false); // Initially disabled
+        deleteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        deleteButton.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        
+        // Add rounded corners and styling
+        deleteButton.setUI(new javax.swing.plaf.basic.BasicButtonUI() {
+            @Override
+            public void paint(Graphics g, JComponent c) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Paint rounded background
+                g2.setColor(c.getBackground());
+                g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 20, 20);
+                
+                // Paint text
+                super.paint(g, c);
+                g2.dispose();
+            }
+        });
+        
+        // Add hover effect
+        deleteButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (deleteButton.isEnabled()) {
+                    deleteButton.setBackground(Color.decode("#FF4040"));
+                }
+            }
+            
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (deleteButton.isEnabled()) {
+                    deleteButton.setBackground(Color.decode("#FF6B6B"));
+                }
+            }
+        });
+        
+        // Add delete action
+        deleteButton.addActionListener(e -> {
+            if (chatRoomId != null && !chatRoomId.isEmpty()) {
+                // Confirm deletion
+                int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete this chat?",
+                    "Delete Chat",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+                );
+                
+                if (confirm == JOptionPane.YES_OPTION) {
+                    deleteChatRoom(chatRoomId, chatTitleLabel, deleteButton);
+                }
+            }
+        });
+        
+        headerPanel.add(deleteButton, BorderLayout.EAST);
+        
+        // Add header to the panel
+        add(headerPanel, BorderLayout.NORTH);
+        
+        // Save references to update later
+        this.chatTitleLabel = chatTitleLabel;
+        this.deleteButton = deleteButton;
         }
     private void refreshLayout() {
         messagesPanel.revalidate();
         messagesPanel.repaint();
     }
     // Set chat room ID and load messages
+        // Modify the setChatRoomId method
     public void setChatRoomId(String chatRoomId) {
         System.out.println("Setting chat room ID: " + chatRoomId);
         this.chatRoomId = chatRoomId;
+        
+        // Update header UI
+        if (chatRoomId != null && !chatRoomId.isEmpty()) {
+            // Enable delete button
+            if (deleteButton != null) {
+                deleteButton.setEnabled(true);
+            }
+            
+            // Update chat title - use a simplified version if we don't have the actual name
+            if (chatTitleLabel != null) {
+                String displayName;
+                if (chatRoomId.startsWith("group_")) {
+                    displayName = "Group Chat";
+                } else {
+                    String[] parts = chatRoomId.split("_");
+                    String otherUserId = parts[0].equals(GlobalData.userId) ? parts[1] : parts[0];
+                    displayName = "Chat with " + otherUserId;
+                }
+                chatTitleLabel.setText(displayName);
+            }
+        } else {
+            // Disable delete button and reset title
+            if (deleteButton != null) {
+                deleteButton.setEnabled(false);
+            }
+            if (chatTitleLabel != null) {
+                chatTitleLabel.setText("Select a chat");
+            }
+        }
+        
         loadMessages();
     }
     public void setSidebarPanel(SidebarPanel sidebarPanel) {
@@ -292,5 +411,74 @@ public class ChatPanel extends JPanel {
     // Refresh messages from server
     public void refreshMessages() {
         loadMessages();
+    }
+        // Add this method to the ChatPanel class
+    private void deleteChatRoom(String chatRoomId, JLabel chatTitleLabel, JButton deleteButton) {
+        executorService.submit(() -> {
+            try {
+                // Create the API URL with the chat room ID
+                URL url = new URL("http://localhost:8081/api/delete-chat/" + chatRoomId);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("DELETE");
+                connection.setRequestProperty("Content-Type", "application/json");
+                
+                // Add user ID as a request parameter or header for authentication
+                connection.setRequestProperty("User-ID", GlobalData.userId);
+                
+                int responseCode = connection.getResponseCode();
+                
+                SwingUtilities.invokeLater(() -> {
+                    if (responseCode == HttpURLConnection.HTTP_OK || 
+                        responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
+                        // Success - update UI
+                        clearChat();
+                        chatTitleLabel.setText("Select a chat");
+                        deleteButton.setEnabled(false);
+                        
+                        // Refresh sidebar to remove the deleted chat
+                        if (sidebarPanel != null) {
+                            sidebarPanel.refreshChatList();
+                        }
+                        
+                        JOptionPane.showMessageDialog(
+                            this,
+                            "Chat deleted successfully.",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                    } else {
+                        // Error handling
+                        JOptionPane.showMessageDialog(
+                            this,
+                            "Failed to delete chat. Error code: " + responseCode,
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+                });
+                
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to delete chat: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                });
+            }
+        });
+    }
+    
+    // Add this method to clear the chat
+    public void clearChat() {
+        this.chatRoomId = null;
+        
+        SwingUtilities.invokeLater(() -> {
+            messagesPanel.removeAll();
+            messagesPanel.revalidate();
+            messagesPanel.repaint();
+        });
     }
 }
