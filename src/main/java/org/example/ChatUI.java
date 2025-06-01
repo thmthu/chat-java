@@ -20,7 +20,7 @@ public class ChatUI extends JFrame {
         return socketClient;
     }
     public ChatUI() {
-        setTitle("Hello " + GlobalData.userId + " - Chat App");
+        setTitle("CHAT APP HELLO USER " + GlobalData.userId + "!");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
@@ -34,7 +34,7 @@ public class ChatUI extends JFrame {
         headerPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
         
         // Create app title for the left side of header
-        JLabel appTitle = new JLabel("Hello " + GlobalData.userId + " - Chat App");
+        JLabel appTitle = new JLabel("CHAT APP HELLO USER " + GlobalData.userId + "!");
         appTitle.setFont(new Font("Arial", Font.BOLD, 18));
         appTitle.setForeground(Color.decode("#99CCFF"));
         headerPanel.add(appTitle, BorderLayout.WEST);

@@ -32,7 +32,8 @@ public class ChatListCellRenderer extends JPanel implements ListCellRenderer<Cha
         // Center panel with name and message
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        
+        centerPanel.setBorder(new EmptyBorder(5, 8, 0, 0));
+
         nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
         messageLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         messageLabel.setForeground(Color.GRAY);
@@ -41,27 +42,10 @@ public class ChatListCellRenderer extends JPanel implements ListCellRenderer<Cha
         centerPanel.add(Box.createVerticalStrut(3));
         centerPanel.add(messageLabel);
         
-        // Right panel with time and unread count
-        JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-        
-        timeLabel.setFont(new Font("Arial", Font.PLAIN, 10));
-        timeLabel.setForeground(Color.GRAY);
-        
-        unreadLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        unreadLabel.setForeground(Color.WHITE);
-        unreadLabel.setBackground(new Color(0, 122, 255));
-        unreadLabel.setOpaque(true);
-        unreadLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        unreadLabel.setBorder(new EmptyBorder(2, 6, 2, 6));
-        
-        rightPanel.add(timeLabel);
-        rightPanel.add(Box.createVerticalStrut(5));
-        rightPanel.add(unreadLabel);
-        
+     
+      
         add(avatarPanel, BorderLayout.WEST);
         add(centerPanel, BorderLayout.CENTER);
-        add(rightPanel, BorderLayout.EAST);
     }
     
     @Override

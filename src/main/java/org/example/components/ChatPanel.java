@@ -237,7 +237,7 @@ public class ChatPanel extends JPanel {
                 } else {
                     String[] parts = chatRoomId.split("_");
                     String otherUserId = parts[0].equals(GlobalData.userId) ? parts[1] : parts[0];
-                    displayName = "Chat with " + otherUserId;
+                    displayName = otherUserId;
                 }
                 chatTitleLabel.setText(displayName);
             }
@@ -324,9 +324,10 @@ public class ChatPanel extends JPanel {
         
         // Message panel
         JPanel messagePanel = new JPanel(new BorderLayout(5, 5));
-        messagePanel.setOpaque(false);
+        // messagePanel.setOpaque(false);
         messagePanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        
+        messagePanel.setLayout(new FlowLayout(isSelf ? FlowLayout.RIGHT : FlowLayout.LEFT, 0, 0));
+        messagePanel.setOpaque(false);
         // Message bubble
         JPanel bubble = new JPanel();
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
@@ -343,16 +344,18 @@ public class ChatPanel extends JPanel {
         
         // Add sender name label - only for messages from others
         if (!isSelf && message.getSenderName() != null && !message.getSenderName().isEmpty()) {
-            JPanel senderNamePanel = new JPanel(new BorderLayout());
-            senderNamePanel.setOpaque(false);
-            
-            JLabel senderNameLabel = new JLabel(message.getSenderName());
-            senderNameLabel.setFont(new Font("Arial", Font.BOLD, 12));
-            senderNameLabel.setForeground(Color.decode("#99CCFF"));
-            
-            senderNamePanel.add(senderNameLabel, BorderLayout.WEST);
-            messagePanel.add(senderNamePanel, BorderLayout.NORTH);
-        }
+        JPanel senderNamePanel = new JPanel(new BorderLayout());
+        senderNamePanel.setOpaque(false);
+
+        JLabel senderNameLabel = new JLabel("  "+ message.getSenderName());
+        senderNameLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        senderNameLabel.setForeground(Color.decode("#99CCFF"));
+
+        senderNamePanel.add(senderNameLabel, BorderLayout.WEST);
+
+        // Add senderNamePanel directly to messagesPanel before messagePanel
+        messagesPanel.add(senderNamePanel);
+    }
         
         // Check if this is a file message
         String content = message.getContent();
@@ -372,7 +375,7 @@ public class ChatPanel extends JPanel {
                 
                 // File icon
                 JLabel fileIcon = new JLabel("File");
-                fileIcon.setFont(new Font("Arial", Font.BOLD, 22));
+                fileIcon.setFont(new Font("Arial", Font.BOLD, 14));
                 fileIcon.setForeground(isSelf ? Color.WHITE : Color.decode("#99CCFF"));                
                 // File name as a clickable link
                 JButton fileLink = new JButton(fileName);
@@ -431,9 +434,9 @@ public class ChatPanel extends JPanel {
         int preferredWidth;
         
         if (contentLength <= 5) {
-            preferredWidth = contentLength * 5 + 5;
+            preferredWidth = contentLength * 7 + 5;
         } else if (contentLength <= 20) {
-            preferredWidth = contentLength * 5 + 5;
+            preferredWidth = contentLength * 7 + 5;
         } else {
             preferredWidth = Math.min(300, contentLength * 5 + 5);
         }

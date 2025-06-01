@@ -58,14 +58,13 @@ public class SidebarPanel extends JPanel {
         setBackground(Color.WHITE);
         
         // Create new chat button
-        JButton newChatButton = new ButtonCustom("+ New Chat");
+        JButton newChatButton = new ButtonCustom("        + New Chat      ");
         newChatButton.addActionListener(onNewChatClicked);
 
-        JButton newChatGroup = new ButtonCustom("+ New Group");
+        JButton newChatGroup = new ButtonCustom("   + New Group  ");
         newChatGroup.addActionListener(e -> showNewGroupDialog());
 
-        JButton onlineList = new ButtonCustom("Online");
-        newChatButton.addActionListener(onNewChatClicked);
+      
         
         // Add the button to a panel at the top
        // Sử dụng FlowLayout với khoảng cách 15 pixels giữa các components
@@ -76,7 +75,6 @@ public class SidebarPanel extends JPanel {
         // Thêm các nút vào panel
         topPanel.add(newChatButton);
         topPanel.add(newChatGroup);
-        topPanel.add(onlineList);
         add(topPanel, BorderLayout.NORTH);
         
         // Create chat list
