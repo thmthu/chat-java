@@ -45,10 +45,15 @@ public class ChatWebSocketClient {
             return;
         }
         System.out.println("================= Received message: " + message);
+        if (message.contains("\"type\":\"USER_STATUS\"")) {
+            handleUserStatusMessage(message);
+            return;
+        }
+
         if (message.contains("\"type\":\"MESSAGE_DELETED\"")) {
-        handleWebSocketMessage(message);
-        return;
-    }
+            handleWebSocketMessage(message);
+            return;
+        }
 
         try {
             // Parse JSON message
@@ -179,6 +184,30 @@ public class ChatWebSocketClient {
                 }
             }
         }
+
+        // Add this method to handle USER_STATUS
+private static class UserStatusPayload {
+    String type;
+    String userId;
+    boolean online;
+}
+
+public void handleUserStatusMessage(String json) {
+    try {
+        UserStatusPayload data = gson.fromJson(json, UserStatusPayload.class);
+        if ("USER_STATUS".equals(data.type)) {
+            // Update your UI here: for example, update the user list or avatar
+            SwingUtilities.invokeLater(() -> {
+                if (sidebarPanel != null) {
+                    sidebarPanel.updateUserOnlineStatus(data.userId, data.online);
+                }
+            });
+            System.out.println("User " + data.userId + " is now " + (data.online ? "online" : "offline"));
+        }
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+}
     /**
      * Class đại diện cho cấu trúc tin nhắn từ server
      */

@@ -13,6 +13,8 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -22,8 +24,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonDeserializationContext;
 import java.lang.reflect.Type;
 import java.time.format.DateTimeFormatter;
 
@@ -34,13 +36,20 @@ public class SidebarPanel extends JPanel {
     private JFrame mainFrame;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Gson gson;
-    // Add a new field to hold the callback function
     private Consumer<String> onChatSelected;
 
-    // Add this method to set the chat selection handler
+    // Store online user IDs
+    private Set<String> onlineUserIds = new HashSet<>();
+
+    // Getter for renderer
+    public Set<String> getOnlineUserIds() {
+        return onlineUserIds;
+    }
+
     public void setOnChatSelected(Consumer<String> onChatSelected) {
         this.onChatSelected = onChatSelected;
-}
+    }
+
     public SidebarPanel(ActionListener onNewChatClicked) {
         // Initialize Gson with custom date time adapter
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -51,54 +60,46 @@ public class SidebarPanel extends JPanel {
             }
         });
         gson = gsonBuilder.create();
-        
-        // Setup UI
+
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(300, 0));
         setBackground(Color.WHITE);
-        
-        // Create new chat button
+
         JButton newChatButton = new ButtonCustom("        + New Chat      ");
         newChatButton.addActionListener(onNewChatClicked);
 
         JButton newChatGroup = new ButtonCustom("   + New Group  ");
         newChatGroup.addActionListener(e -> showNewGroupDialog());
 
-      
-        
-        // Add the button to a panel at the top
-       // Sử dụng FlowLayout với khoảng cách 15 pixels giữa các components
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2)); // hgap=15, vgap=5
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2));
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
         topPanel.setBackground(Color.WHITE);
 
-        // Thêm các nút vào panel
         topPanel.add(newChatButton);
         topPanel.add(newChatGroup);
         add(topPanel, BorderLayout.NORTH);
-        
-        // Create chat list
+
         chatListModel = new DefaultListModel<>();
         chatList = new JList<>(chatListModel);
-        chatList.setCellRenderer(new ChatListCellRenderer());
+        chatList.setCellRenderer(new ChatListCellRenderer(this)); // Pass SidebarPanel for online status
         chatList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        
+
         chatList.addListSelectionListener(e -> {
-        if (!e.getValueIsAdjusting()) {
-            ChatSidebarItem selectedItem = chatList.getSelectedValue();
-            if (selectedItem != null && onChatSelected != null) {
-                onChatSelected.accept(selectedItem.getChatRoomId());
+            if (!e.getValueIsAdjusting()) {
+                ChatSidebarItem selectedItem = chatList.getSelectedValue();
+                if (selectedItem != null && onChatSelected != null) {
+                    onChatSelected.accept(selectedItem.getChatRoomId());
+                }
             }
-        }
         });
         JScrollPane scrollPane = new JScrollPane(chatList);
         scrollPane.setBorder(null);
         add(scrollPane, BorderLayout.CENTER);
-        
+
         // Load data
         loadChatData();
     }
-    
+
     private void loadChatData() {
         executorService.submit(() -> {
             try {
@@ -108,13 +109,13 @@ public class SidebarPanel extends JPanel {
                 URL url = new URL(apiUrl);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
-                
+
                 int responseCode = connection.getResponseCode();
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                     StringBuilder response = new StringBuilder();
                     String line;
-                    
+
                     while ((line = reader.readLine()) != null) {
                         response.append(line);
                     }
@@ -122,67 +123,111 @@ public class SidebarPanel extends JPanel {
 
                     Type listType = new TypeToken<ArrayList<ChatSidebarItem>>(){}.getType();
                     List<ChatSidebarItem> chatItems = gson.fromJson(response.toString(), listType);
-                    
+
                     SwingUtilities.invokeLater(() -> {
                         chatListModel.clear();
                         for (ChatSidebarItem item : chatItems) {
                             chatListModel.addElement(item);
                         }
+                        // After loading chat data, fetch online users
+                        loadOnlineUsers();
                     });
                 } else {
                     System.err.println("Failed to fetch chat data: " + responseCode);
-                    // If API fails, add some sample data
                     addSampleData();
+                    loadOnlineUsers();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                // If error occurs, add some sample data
                 addSampleData();
+                loadOnlineUsers();
             }
         });
     }
-    private void showNewGroupDialog() {
-    // Tìm JFrame cha
-    JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
-    
-    // Tạo và hiển thị dialog
-    NewGroupDialog dialog = new NewGroupDialog(parent, data -> {
-        System.out.println("Creating group: " + data.groupName);
-        System.out.println("Members: " + data.memberIds);
-        
-        // Xử lý tạo group:
-        // 1. Gửi request tạo group lên server
-        try {
-            // Có thể gọi API tạo group ở đây
-            // createGroupOnServer(data.groupName, data.memberIds);
-            
-            // Sau khi tạo group thành công:
-            JOptionPane.showMessageDialog(
-                parent,
-                "Group '" + data.groupName + "' has been created successfully!",
-                "Group Created",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
-            // Refresh danh sách chat để hiển thị group mới
-            refreshChatList();
-            
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
-                parent,
-                "Failed to create group: " + ex.getMessage(),
-                                "Error",
-                JOptionPane.ERROR_MESSAGE
-            );
+public void updateUserOnlineStatus(String userId, boolean online) {
+        synchronized (onlineUserIds) {
+            if (online) {
+                onlineUserIds.add(userId);
+            } else {
+                onlineUserIds.remove(userId);
+            }
         }
-    });
-    
-    dialog.setVisible(true);
-}
+        // Repaint the chat list to reflect the new status
+        SwingUtilities.invokeLater(() -> {
+            if (chatList != null) {
+                chatList.repaint();
+            }
+        });
+    }
+    // Fetch online users from backend
+    private void loadOnlineUsers() {
+        executorService.submit(() -> {
+            System.out.println("Fetching online users...");
+            try {
+                String apiUrl = "http://localhost:8081/api/online-users";
+                URL url = new URL(apiUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                int responseCode = connection.getResponseCode();
+                System.out.println("Online users API response code: " + responseCode);
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+
+                        response.append(line);
+                    }
+                    reader.close();
+                    System.out.println("==========Online users response: " + response.toString());
+                    // Assume response is a JSON array of user IDs: ["user1", "user2", ...]
+                    Type listType = new TypeToken<List<String>>(){}.getType();
+                    List<String> ids = gson.fromJson(response.toString(), listType);
+                    synchronized (onlineUserIds) {
+                        onlineUserIds.clear();
+                        onlineUserIds.addAll(ids);
+                    }
+                    SwingUtilities.invokeLater(() -> chatList.repaint());
+                }
+            } catch (Exception e) {
+                System.out.println("Error fetching online users: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void showNewGroupDialog() {
+        JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
+
+        NewGroupDialog dialog = new NewGroupDialog(parent, data -> {
+            System.out.println("Creating group: " + data.groupName);
+            System.out.println("Members: " + data.memberIds);
+
+            try {
+                JOptionPane.showMessageDialog(
+                    parent,
+                    "Group '" + data.groupName + "' has been created successfully!",
+                    "Group Created",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+                refreshChatList();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                    parent,
+                    "Failed to create group: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+        });
+
+        dialog.setVisible(true);
+    }
+
     private void addSampleData() {
         SwingUtilities.invokeLater(() -> {
             chatListModel.clear();
-            
+
             ChatSidebarItem item1 = new ChatSidebarItem();
             item1.setChatRoomId("53acda57-67e2-491a-8b31-d1dd202566b9");
             item1.setLatestMessage("minh la 25");
@@ -190,7 +235,7 @@ public class SidebarPanel extends JPanel {
             item1.setSenderAvatar("avatar3.jpg");
             item1.setSentAt(LocalDateTime.now().minusMinutes(5));
             item1.setUnreadCount(0);
-            
+
             ChatSidebarItem item2 = new ChatSidebarItem();
             item2.setChatRoomId("dfc7a283-eab3-4d23-bd7d-8a8c08b08e33");
             item2.setLatestMessage("hello second");
@@ -198,13 +243,12 @@ public class SidebarPanel extends JPanel {
             item2.setSenderAvatar("avatar1.jpg");
             item2.setSentAt(LocalDateTime.now().minusHours(1));
             item2.setUnreadCount(2);
-            
+
             chatListModel.addElement(item1);
             chatListModel.addElement(item2);
         });
     }
-    
-    // Add this method to refresh the chat list
+
     public void refreshChatList() {
         loadChatData();
     }
